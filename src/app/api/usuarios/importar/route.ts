@@ -5,7 +5,7 @@ import { getMilitaresFromSheets } from '@/lib/google-sheets'
 
 const ADMINS_NPM = ['1386697', '1463223'] // Jessé e Thiago
 const SENHA_PADRAO = 'Mudar@123'
-const DOMINIO = '5ciapmmamb.pm.mg.gov.br'
+const DOMINIO = 'pmmg.mg.gov.br'
 
 export async function POST() {
   try {

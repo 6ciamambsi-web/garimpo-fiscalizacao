@@ -23,7 +23,7 @@ function LoginForm() {
     try {
       const supabase = createClient()
       // Login usando npm@sistema.local como e-mail virtual
-      const email = `${npm.trim()}@5ciapmmamb.pm.mg.gov.br`
+      const email = `${npm.trim()}@pmmg.mg.gov.br`
       const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
       if (error) {
         setErro('Nº PM ou senha incorretos.')
