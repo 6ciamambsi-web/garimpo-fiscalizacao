@@ -1,7 +1,7 @@
 // src/lib/auth.ts
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import type { Usuario, AuditLog } from '@/types'
+import type { Usuario } from '@/types'
 import { headers } from 'next/headers'
 
 export async function getUsuarioAtual(): Promise<Usuario | null> {
@@ -23,6 +23,7 @@ export async function getUsuarioAtual(): Promise<Usuario | null> {
 export async function registrarAuditoria(params: {
   usuario_id: string
   usuario_nome: string
+  usuario_npm?: string
   acao: string
   tabela: string
   registro_id: string
@@ -38,16 +39,13 @@ export async function registrarAuditoria(params: {
       ...params,
       ip,
       created_at: new Date().toISOString()
-    } as Omit<AuditLog, 'id'>)
+    })
   } catch (err) {
     console.error('Erro ao registrar auditoria:', err)
   }
 }
 
-export function verificarPermissao(
-  usuario: Usuario,
-  nivel: 'admin_geral' | 'admin' | 'operacional'
-): boolean {
-  const hierarquia = { operacional: 1, admin: 2, admin_geral: 3 }
-  return (hierarquia[usuario.perfil] || 0) >= (hierarquia[nivel] || 0)
+export function verificarPermissao(usuario: Usuario, nivel: 'admin' | 'operacional'): boolean {
+  if (nivel === 'operacional') return true
+  return usuario.perfil === 'admin'
 }
