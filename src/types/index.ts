@@ -1,23 +1,25 @@
 // src/types/index.ts
 
-export type UserRole = 'admin_geral' | 'admin' | 'operacional'
+export type UserRole = 'admin' | 'operacional'
 
 export interface Usuario {
   id: string
   nome: string
-  email: string
-  matricula: string
+  npm: string
+  posto_graduacao: string
   unidade: string
   perfil: UserRole
   ativo: boolean
+  primeiro_acesso: boolean
   created_at: string
   updated_at: string
 }
 
 export interface Militar {
   id: string
-  nome_completo: string
   matricula: string
+  posto_graduacao: string
+  nome_completo: string
   unidade: string
   funcao: string
   ativo: boolean
@@ -26,6 +28,7 @@ export interface Militar {
 export interface Alvo {
   id: string
   nome: string
+  numero: string
   tipo: string
   municipio: string
   observacoes?: string
@@ -56,28 +59,22 @@ export interface Trabalhador {
 
 export interface Fiscalizacao {
   id?: string
-  // Equipe
   equipe_ids: string[]
   equipe_nomes?: string[]
-  // Alvo
   alvo_id?: string
   alvo_nome?: string
-  // Localização
   municipio: string
   coordenadas_lat?: number
   coordenadas_lng?: number
   hora_abordagem?: string
-  // Responsáveis
   responsavel_local?: string
   responsavel_principal_nome?: string
   responsavel_principal_cpf?: string
   responsavel_principal_rg?: string
   responsavel_principal_endereco?: string
   responsavel_principal_telefones?: string[]
-  // Trabalhadores
   qtd_trabalhadores: number
   trabalhadores: Trabalhador[]
-  // Estrutura operacional
   qtd_balsa_draga: number
   qtd_motores: number
   qtd_bombas_succao: number
@@ -90,7 +87,6 @@ export interface Fiscalizacao {
   qtd_respiradores: number
   qtd_balancas: number
   qtd_frascos_mercurio: number
-  // Características operacionais
   horario_funcionamento?: string
   dias_operacao_semana?: number
   producao_diaria_estimada?: string
@@ -98,30 +94,16 @@ export interface Fiscalizacao {
   metodo_garimpo: MetodoGarimpo
   metodo_garimpo_outro?: string
   qtd_ouro_gramas?: number
-  // Situação minerária
   titulo_minerario: TituloMinerario
   titulo_minerario_outro?: string
   numero_processo_minerario?: string
   informacoes_complementares?: string
-  // Metadados
   usuario_id?: string
   usuario_nome?: string
+  usuario_npm?: string
   created_at?: string
   updated_at?: string
   status?: 'ativo' | 'arquivado'
-}
-
-export interface AuditLog {
-  id: string
-  usuario_id: string
-  usuario_nome: string
-  acao: string
-  tabela: string
-  registro_id: string
-  dados_anteriores?: Record<string, unknown>
-  dados_novos?: Record<string, unknown>
-  ip?: string
-  created_at: string
 }
 
 export interface FiscalizacaoFiltros {
@@ -129,8 +111,7 @@ export interface FiscalizacaoFiltros {
   data_fim?: string
   municipio?: string
   alvo_id?: string
-  equipe_id?: string
-  usuario_id?: string
+  usuario_npm?: string
   titulo_minerario?: TituloMinerario
 }
 

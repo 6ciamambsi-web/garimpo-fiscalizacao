@@ -3,14 +3,14 @@
 import { useState, FormEvent, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Shield, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { Shield, Lock, Hash, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/'
 
-  const [email, setEmail] = useState('')
+  const [npm, setNpm] = useState('')
   const [senha, setSenha] = useState('')
   const [showSenha, setShowSenha] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -22,10 +22,25 @@ function LoginForm() {
     setLoading(true)
     try {
       const supabase = createClient()
+      // Login usando npm@sistema.local como e-mail virtual
+      const email = `${npm.trim()}@5ciapmmamb.pm.mg.gov.br`
       const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
       if (error) {
-        setErro('E-mail ou senha incorretos. Verifique seus dados.')
+        setErro('Nº PM ou senha incorretos.')
         return
+      }
+      // Verificar se precisa trocar a senha
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: usuario } = await supabase
+          .from('usuarios')
+          .select('primeiro_acesso')
+          .eq('id', user.id)
+          .single()
+        if (usuario?.primeiro_acesso) {
+          router.push('/primeiro-acesso')
+          return
+        }
       }
       router.push(redirect)
       router.refresh()
@@ -43,7 +58,7 @@ function LoginForm() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-4">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-white text-xl font-bold tracking-wide">PMMG — 3ª CIA PM MAmb</h1>
+          <h1 className="text-white text-xl font-bold tracking-wide">PMMG — 5ª CIA PM MAmb</h1>
           <p className="text-pmmg-green-200 text-sm mt-1">Sistema de Fiscalização de Garimpo/Draga</p>
         </div>
 
@@ -59,17 +74,19 @@ function LoginForm() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nº PM</label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
-                  type="email"
+                  type="text"
                   required
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  value={npm}
+                  onChange={e => setNpm(e.target.value.replace(/\D/g, ''))}
                   className="input-field pl-10"
-                  placeholder="seu@email.gov.br"
-                  autoComplete="email"
+                  placeholder="Ex: 1463223"
+                  autoComplete="username"
+                  inputMode="numeric"
+                  maxLength={10}
                 />
               </div>
             </div>
