@@ -104,33 +104,24 @@ export function gerarPDF(fiscalizacao: Fiscalizacao, usuarioNome: string): void 
     y += 10
   }
 
-  // Campo: label em negrito + valor na linha de baixo se for longo
+  // Campo: label em negrito na primeira linha, valor na linha seguinte
   const addField = (label: string, value: string | number | undefined | null) => {
     const val = (value !== undefined && value !== null && value !== '') ? String(value) : '—'
-    checkY(10)
+    checkY(14)
     doc.setFontSize(8)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(80, 80, 80)
     doc.text(`${label}:`, margin, y)
+    y += 5
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(0, 0, 0)
-    // Calcular espaço disponível após o label
-    const labelW = doc.getTextWidth(`${label}: `)
-    const availW = contentW - labelW
-    const lines = doc.splitTextToSize(val, availW)
-    if (lines.length === 1 && labelW + doc.getTextWidth(val) <= contentW) {
-      // Cabe na mesma linha
-      doc.text(val, margin + labelW, y)
-      y += 6.5
-    } else {
-      // Vai para a linha de baixo
+    const lines = doc.splitTextToSize(val, contentW - 4)
+    lines.forEach((line: string) => {
+      checkY(6)
+      doc.text(line, margin + 3, y)
       y += 5
-      lines.forEach((line: string) => {
-        checkY(6)
-        doc.text(line, margin + 4, y)
-        y += 5.5
-      })
-    }
+    })
+    y += 2
   }
 
   // ── Início ────────────────────────────────────────────────

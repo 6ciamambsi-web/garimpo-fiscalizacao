@@ -160,10 +160,14 @@ export default function SecaoDadosGerais({ dados, militares, alvos, onChange, er
             <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
             <input
               type="text"
-              defaultValue={dados.coordenadas_lat?.toString() || ''}
-              onBlur={e => {
-                const v = e.target.value.replace(',', '.')
-                const num = parseFloat(v)
+              value={dados.coordenadas_lat != null ? String(dados.coordenadas_lat) : ''}
+              onChange={e => {
+                const v = e.target.value
+                if (v === '' || v === '-') {
+                  onChange('coordenadas_lat', v === '' ? undefined : v as unknown as number)
+                  return
+                }
+                const num = parseFloat(v.replace(',', '.'))
                 onChange('coordenadas_lat', isNaN(num) ? undefined : num)
               }}
               className={`input-field font-mono ${erros.coordenadas ? 'error' : ''}`}
@@ -174,10 +178,14 @@ export default function SecaoDadosGerais({ dados, militares, alvos, onChange, er
             <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
             <input
               type="text"
-              defaultValue={dados.coordenadas_lng?.toString() || ''}
-              onBlur={e => {
-                const v = e.target.value.replace(',', '.')
-                const num = parseFloat(v)
+              value={dados.coordenadas_lng != null ? String(dados.coordenadas_lng) : ''}
+              onChange={e => {
+                const v = e.target.value
+                if (v === '' || v === '-') {
+                  onChange('coordenadas_lng', v === '' ? undefined : v as unknown as number)
+                  return
+                }
+                const num = parseFloat(v.replace(',', '.'))
                 onChange('coordenadas_lng', isNaN(num) ? undefined : num)
               }}
               className={`input-field font-mono ${erros.coordenadas ? 'error' : ''}`}
