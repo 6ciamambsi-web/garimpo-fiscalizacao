@@ -3,7 +3,7 @@
 import { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Shield, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
+import { Shield, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 export default function PrimeiroAcessoPage() {
   const router = useRouter()
@@ -14,17 +14,10 @@ export default function PrimeiroAcessoPage() {
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
 
-  const requisitos = [
-    { ok: novaSenha.length >= 8, texto: 'Mínimo 8 caracteres' },
-    { ok: /[A-Z]/.test(novaSenha), texto: 'Uma letra maiúscula' },
-    { ok: /[0-9]/.test(novaSenha), texto: 'Um número' },
-    { ok: /[^A-Za-z0-9]/.test(novaSenha), texto: 'Um caractere especial (!@#$...)' },
-  ]
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setErro('')
-    if (!requisitos.every(r => r.ok)) { setErro('A senha não atende a todos os requisitos.'); return }
+    if (novaSenha.length < 6) { setErro('A senha deve ter pelo menos 6 caracteres.'); return }
     if (novaSenha !== confirmar) { setErro('As senhas não coincidem.'); return }
 
     setLoading(true)
@@ -33,7 +26,6 @@ export default function PrimeiroAcessoPage() {
       const { error } = await supabase.auth.updateUser({ password: novaSenha })
       if (error) throw error
 
-      // Marcar primeiro_acesso como false
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         await supabase.from('usuarios')
@@ -57,7 +49,7 @@ export default function PrimeiroAcessoPage() {
           <div className="bg-gradient-to-r from-pmmg-green-800 to-pmmg-green-600 px-8 py-6 text-center">
             <Shield className="w-10 h-10 text-white mx-auto mb-3" />
             <h1 className="text-white text-lg font-bold">Primeiro Acesso</h1>
-            <p className="text-pmmg-green-200 text-sm mt-1">Você precisa criar uma nova senha para continuar</p>
+            <p className="text-pmmg-green-200 text-sm mt-1">Crie uma nova senha para continuar</p>
           </div>
 
           <div className="px-8 py-8">
@@ -79,23 +71,14 @@ export default function PrimeiroAcessoPage() {
                     value={novaSenha}
                     onChange={e => setNovaSenha(e.target.value)}
                     className="input-field pl-10 pr-10"
-                    placeholder="Digite sua nova senha"
+                    placeholder="Mínimo 6 caracteres"
+                    minLength={6}
                   />
                   <button type="button" onClick={() => setShow1(v => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                     {show1 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-              </div>
-
-              {/* Requisitos */}
-              <div className="bg-gray-50 rounded-lg p-3 space-y-1.5">
-                {requisitos.map((r, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <CheckCircle className={`w-4 h-4 flex-shrink-0 ${r.ok ? 'text-pmmg-green-600' : 'text-gray-300'}`} />
-                    <span className={`text-xs ${r.ok ? 'text-pmmg-green-700' : 'text-gray-400'}`}>{r.texto}</span>
-                  </div>
-                ))}
               </div>
 
               <div>
@@ -132,6 +115,10 @@ export default function PrimeiroAcessoPage() {
                 )}
               </button>
             </form>
+
+            <p className="mt-4 text-center text-xs text-gray-400">
+              A senha deve ter pelo menos 6 caracteres.
+            </p>
           </div>
         </div>
       </div>

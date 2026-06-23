@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     // Resetar senha para padrão e marcar primeiro_acesso
     const { error } = await serviceClient.auth.admin.updateUserById(usuario_id, {
-      password: 'Mudar@123'
+      password: '5ciamamb'
     })
     if (error) throw error
 
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       .update({ primeiro_acesso: true })
       .eq('id', usuario_id)
 
-    return NextResponse.json({ message: 'Senha resetada para Mudar@123. Usuário deverá trocar no próximo acesso.' })
+    return NextResponse.json({ message: 'Senha resetada para 5ciamamb. Usuário deverá trocar no próximo acesso.' })
   } catch (err) {
     console.error(err)
     return NextResponse.json({ error: 'Erro ao resetar senha' }, { status: 500 })

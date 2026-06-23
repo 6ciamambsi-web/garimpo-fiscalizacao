@@ -4,7 +4,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getMilitaresFromSheets } from '@/lib/google-sheets'
 
 const ADMINS_NPM = ['1386697', '1463223']
-const SENHA_PADRAO = 'Mudar@123'
+const SENHA_PADRAO = '5ciamamb'
 const DOMINIO = 'pmmg.mg.gov.br'
 
 export async function POST() {

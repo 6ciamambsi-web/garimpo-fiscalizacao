@@ -244,7 +244,7 @@ export default function AdminPage() {
         <div className="mt-4 bg-pmmg-green-50 border border-pmmg-green-200 rounded-lg p-4 text-sm text-pmmg-green-800">
           <p className="font-medium mb-1">Como funciona:</p>
           <ul className="space-y-1 text-xs list-disc list-inside">
-            <li><strong>Importar da Planilha</strong> — puxa todos os militares da aba "militares" e cadastra automaticamente com senha <code>Mudar@123</code></li>
+            <li><strong>Importar da Planilha</strong> — puxa todos os militares da aba "militares" e cadastra automaticamente com senha <code>5ciamamb</code></li>
             <li><strong>Escudo</strong> — alterna entre Admin e Operacional</li>
             <li><strong>Seta circular</strong> — reseta a senha para <code>Mudar@123</code></li>
             <li><strong>X/Check</strong> — desativa ou reativa o acesso ao sistema</li>
