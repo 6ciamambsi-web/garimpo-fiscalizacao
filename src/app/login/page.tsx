@@ -83,7 +83,7 @@ function LoginForm() {
                   value={npm}
                   onChange={e => setNpm(e.target.value.replace(/\D/g, ''))}
                   className="input-field pl-10"
-                  placeholder="Ex: 1463223"
+                  placeholder="Ex: 1234567"
                   autoComplete="username"
                   inputMode="numeric"
                   maxLength={10}

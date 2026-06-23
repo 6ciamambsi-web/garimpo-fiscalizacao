@@ -20,6 +20,9 @@ export default function Navbar({ usuario }: NavbarProps) {
     router.refresh()
   }
 
+  const nomeExibir = usuario.nome || `Nº ${usuario.npm}`
+  const perfilLabel = usuario.perfil === 'admin' ? '⭐ Admin' : 'Operacional'
+
   return (
     <header className="bg-pmmg-green-800 shadow-lg sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -31,6 +34,7 @@ export default function Navbar({ usuario }: NavbarProps) {
           </div>
         </div>
 
+        {/* Desktop */}
         <div className="hidden md:flex items-center gap-2 relative">
           {usuario.perfil === 'admin' && (
             <button onClick={() => router.push('/admin')}
@@ -45,18 +49,19 @@ export default function Navbar({ usuario }: NavbarProps) {
               <User className="w-4 h-4 text-white" />
             </div>
             <div className="text-left">
-              <p className="text-white text-sm font-medium leading-tight">{usuario.nome}</p>
+              <p className="text-white text-sm font-medium leading-tight">{nomeExibir}</p>
               <p className="text-pmmg-green-300 text-xs leading-tight">
-                {usuario.perfil === 'admin' ? '⭐ Admin' : 'Operacional'} · Nº {usuario.npm}
+                {perfilLabel} · Nº {usuario.npm}
               </p>
             </div>
             <ChevronDown className={`w-4 h-4 text-pmmg-green-300 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {menuOpen && (
-            <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+            <div className="absolute top-full right-0 mt-1 w-52 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
               <div className="px-3 py-2 border-b border-gray-100">
-                <p className="text-xs text-gray-500">Nº PM: {usuario.npm}</p>
+                <p className="text-xs font-medium text-gray-700">{nomeExibir}</p>
+                <p className="text-xs text-gray-500">{usuario.posto_graduacao} · Nº {usuario.npm}</p>
                 <p className="text-xs text-gray-500">{usuario.unidade}</p>
               </div>
               <button onClick={handleLogout}
@@ -68,6 +73,7 @@ export default function Navbar({ usuario }: NavbarProps) {
           )}
         </div>
 
+        {/* Mobile */}
         <button className="md:hidden p-2 text-white" onClick={() => setMobileOpen(v => !v)}>
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -80,8 +86,8 @@ export default function Navbar({ usuario }: NavbarProps) {
               <User className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="text-white text-sm font-medium">{usuario.nome}</p>
-              <p className="text-pmmg-green-300 text-xs">Nº {usuario.npm} · {usuario.perfil === 'admin' ? 'Admin' : 'Operacional'}</p>
+              <p className="text-white text-sm font-medium">{nomeExibir}</p>
+              <p className="text-pmmg-green-300 text-xs">{usuario.posto_graduacao} · Nº {usuario.npm} · {perfilLabel}</p>
             </div>
           </div>
           {usuario.perfil === 'admin' && (
