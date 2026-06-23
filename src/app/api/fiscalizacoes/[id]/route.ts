@@ -58,6 +58,14 @@ export async function PUT(
     const { data: updated } = await supabase
       .from('fiscalizacoes').select('*').eq('id', id).single()
 
+    // Atualizar no Google Sheets
+    try {
+      const { atualizarFiscalizacaoSheets } = await import('@/lib/google-sheets')
+      await atualizarFiscalizacaoSheets(updated as any)
+    } catch (sheetsErr) {
+      console.error('Sheets update error (não crítico):', sheetsErr)
+    }
+
     return NextResponse.json({ data: updated, message: 'Registro atualizado com sucesso' })
   } catch (err) {
     console.error('PUT unexpected error:', err)
@@ -90,6 +98,14 @@ export async function DELETE(
     if (error) {
       console.error('DELETE error:', JSON.stringify(error))
       return NextResponse.json({ error: `Erro ao excluir: ${error.message}` }, { status: 500 })
+    }
+
+    // Excluir do Google Sheets
+    try {
+      const { excluirFiscalizacaoSheets } = await import('@/lib/google-sheets')
+      await excluirFiscalizacaoSheets(id)
+    } catch (sheetsErr) {
+      console.error('Sheets delete error (não crítico):', sheetsErr)
     }
 
     return NextResponse.json({ message: 'Registro excluído com sucesso' })
