@@ -198,7 +198,16 @@ export function gerarPDF(fiscalizacao: Fiscalizacao, usuarioNome: string): void 
 
   // ── 3. TRABALHADORES ──────────────────────────────────────
   addSection('3. Levantamento de Trabalhadores')
-  addField('Quantidade no Momento da Abordagem', fiscalizacao.qtd_trabalhadores)
+  // Quantidade em linha própria, sem sobreposição
+  checkY(10)
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(80, 80, 80)
+  doc.text('Quantidade no Momento da Abordagem:', margin, y)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(0, 0, 0)
+  doc.text(String(fiscalizacao.qtd_trabalhadores ?? 0), margin + 75, y)
+  y += 7
 
   if (fiscalizacao.trabalhadores?.length > 0) {
     checkY(20)

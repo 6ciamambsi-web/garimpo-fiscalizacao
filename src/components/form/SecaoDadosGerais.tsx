@@ -1,5 +1,6 @@
 'use client'
 // src/components/form/SecaoDadosGerais.tsx
+import { useState } from 'react'
 import { Users, MapPin, Clock, Target } from 'lucide-react'
 import type { Fiscalizacao, Militar, Alvo } from '@/types'
 import { maskCoord } from '@/lib/masks'
@@ -159,30 +160,28 @@ export default function SecaoDadosGerais({ dados, militares, alvos, onChange, er
             <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
             <input
               type="text"
-              value={dados.coordenadas_lat?.toString() || ''}
-              onChange={e => {
-                const v = maskCoord(e.target.value)
-                const num = parseFloat(v.replace(',', '.'))
+              defaultValue={dados.coordenadas_lat?.toString() || ''}
+              onBlur={e => {
+                const v = e.target.value.replace(',', '.')
+                const num = parseFloat(v)
                 onChange('coordenadas_lat', isNaN(num) ? undefined : num)
               }}
               className={`input-field font-mono ${erros.coordenadas ? 'error' : ''}`}
               placeholder="-21.123456"
-              inputMode="decimal"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
             <input
               type="text"
-              value={dados.coordenadas_lng?.toString() || ''}
-              onChange={e => {
-                const v = maskCoord(e.target.value)
-                const num = parseFloat(v.replace(',', '.'))
+              defaultValue={dados.coordenadas_lng?.toString() || ''}
+              onBlur={e => {
+                const v = e.target.value.replace(',', '.')
+                const num = parseFloat(v)
                 onChange('coordenadas_lng', isNaN(num) ? undefined : num)
               }}
               className={`input-field font-mono ${erros.coordenadas ? 'error' : ''}`}
               placeholder="-44.123456"
-              inputMode="decimal"
             />
           </div>
         </div>

@@ -12,7 +12,7 @@ interface Props {
 const TRABALHADOR_VAZIO: Trabalhador = { nome_completo: '', cpf: '', funcao: '' }
 
 export default function SecaoTrabalhadores({ dados, onChange }: Props) {
-  const trabalhadores = dados.trabalhadores || []
+  const trabalhadores = dados.trabalhadores && dados.trabalhadores.length > 0 ? dados.trabalhadores : [{ ...TRABALHADOR_VAZIO }]
 
   const add = () => onChange('trabalhadores', [...trabalhadores, { ...TRABALHADOR_VAZIO }])
 
