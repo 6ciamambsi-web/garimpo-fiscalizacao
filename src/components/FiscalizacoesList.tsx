@@ -76,8 +76,10 @@ export default function FiscalizacoesList({ usuario, onNova, onEditar, onVisuali
       const res = await fetch(`/api/fiscalizacoes/${id}`, { method: 'DELETE' })
       const data = await res.json()
       if (res.ok) {
+        // Remover da lista local imediatamente
+        setRegistros(prev => prev.filter(r => r.id !== id))
+        setTotal(prev => prev - 1)
         showToast('ok', 'Registro excluído com sucesso.')
-        carregar()
       } else {
         showToast('erro', data.error || 'Erro ao excluir.')
       }
