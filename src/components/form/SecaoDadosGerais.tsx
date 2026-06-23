@@ -162,10 +162,12 @@ export default function SecaoDadosGerais({ dados, militares, alvos, onChange, er
               value={dados.coordenadas_lat?.toString() || ''}
               onChange={e => {
                 const v = maskCoord(e.target.value)
-                onChange('coordenadas_lat', v ? parseFloat(v) : undefined)
+                const num = parseFloat(v.replace(',', '.'))
+                onChange('coordenadas_lat', isNaN(num) ? undefined : num)
               }}
               className={`input-field font-mono ${erros.coordenadas ? 'error' : ''}`}
               placeholder="-21.123456"
+              inputMode="decimal"
             />
           </div>
           <div>
@@ -175,10 +177,12 @@ export default function SecaoDadosGerais({ dados, militares, alvos, onChange, er
               value={dados.coordenadas_lng?.toString() || ''}
               onChange={e => {
                 const v = maskCoord(e.target.value)
-                onChange('coordenadas_lng', v ? parseFloat(v) : undefined)
+                const num = parseFloat(v.replace(',', '.'))
+                onChange('coordenadas_lng', isNaN(num) ? undefined : num)
               }}
               className={`input-field font-mono ${erros.coordenadas ? 'error' : ''}`}
               placeholder="-44.123456"
+              inputMode="decimal"
             />
           </div>
         </div>

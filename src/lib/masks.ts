@@ -21,9 +21,11 @@ export function maskPhone(value: string): string {
     .replace(/(\d{5})(\d)/, '$1-$2')
 }
 
+// Permite digitar coordenadas decimais: -21.123456
 export function maskCoord(value: string): string {
-  // Permite -21.123456
-  return value.replace(/[^0-9.,-]/g, '').slice(0, 12)
+  // Permite: números, ponto, vírgula, hífen/menos
+  // Remove tudo que não for dígito, ponto, vírgula ou sinal de menos
+  return value.replace(/[^0-9.,-]/g, '')
 }
 
 export function validateCPF(cpf: string): boolean {
@@ -42,8 +44,8 @@ export function validateCPF(cpf: string): boolean {
 }
 
 export function validateCoordinates(lat: string, lng: string): boolean {
-  const latN = parseFloat(lat)
-  const lngN = parseFloat(lng)
+  const latN = parseFloat(lat.replace(',', '.'))
+  const lngN = parseFloat(lng.replace(',', '.'))
   return !isNaN(latN) && !isNaN(lngN) &&
     latN >= -90 && latN <= 90 &&
     lngN >= -180 && lngN <= 180

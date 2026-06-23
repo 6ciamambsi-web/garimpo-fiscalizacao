@@ -32,11 +32,16 @@ export default function FiscalizacoesList({ usuario, onNova, onEditar, onVisuali
   const [filtroAberto, setFiltroAberto] = useState(false)
   const [busca, setBusca] = useState('')
   const [excluindo, setExcluindo] = useState<string | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ tipo: 'ok' | 'erro'; msg: string } | null>(null)
 
-  const isAdmin = ['admin', 'admin_geral'].includes(usuario.perfil)
+  const isAdmin = usuario.perfil === 'admin'
   const LIMIT = 15
   const totalPages = Math.ceil(total / LIMIT)
+
+  const showToast = (tipo: 'ok' | 'erro', msg: string) => {
+    setToast({ tipo, msg })
+    setTimeout(() => setToast(null), 3500)
+  }
 
   const carregar = useCallback(async () => {
     setLoading(true)
@@ -60,28 +65,35 @@ export default function FiscalizacoesList({ usuario, onNova, onEditar, onVisuali
 
   useEffect(() => { carregar() }, [carregar])
 
+  const handleEditar = (f: Fiscalizacao) => {
+    onEditar(f)
+  }
+
   const handleExcluir = async (id: string) => {
     if (!confirm('Confirmar exclusão deste registro? Esta ação não pode ser desfeita.')) return
     setExcluindo(id)
     try {
       const res = await fetch(`/api/fiscalizacoes/${id}`, { method: 'DELETE' })
+      const data = await res.json()
       if (res.ok) {
-        setToast('Registro excluído com sucesso.')
+        showToast('ok', 'Registro excluído com sucesso.')
         carregar()
       } else {
-        setToast('Erro ao excluir. Verifique suas permissões.')
+        showToast('erro', data.error || 'Erro ao excluir.')
       }
+    } catch {
+      showToast('erro', 'Erro ao excluir.')
     } finally {
       setExcluindo(null)
-      setTimeout(() => setToast(null), 3500)
     }
   }
 
   return (
     <div>
       {toast && (
-        <div className="fixed top-4 right-4 z-50 bg-pmmg-green-700 text-white px-4 py-3 rounded-xl shadow-lg text-sm">
-          {toast}
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium
+          ${toast.tipo === 'ok' ? 'bg-pmmg-green-50 border border-pmmg-green-200 text-pmmg-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+          {toast.msg}
         </div>
       )}
 
@@ -98,10 +110,8 @@ export default function FiscalizacoesList({ usuario, onNova, onEditar, onVisuali
               className="input-field pl-9"
             />
           </div>
-          <button
-            onClick={() => setFiltroAberto(v => !v)}
-            className={`btn-secondary ${filtroAberto ? 'bg-pmmg-green-50 border-pmmg-green-300' : ''}`}
-          >
+          <button onClick={() => setFiltroAberto(v => !v)}
+            className={`btn-secondary ${filtroAberto ? 'bg-pmmg-green-50 border-pmmg-green-300' : ''}`}>
             <Filter className="w-4 h-4" />
             <span className="hidden sm:inline">Filtros</span>
           </button>
@@ -115,34 +125,26 @@ export default function FiscalizacoesList({ usuario, onNova, onEditar, onVisuali
         </button>
       </div>
 
-      {/* Filtros avançados */}
+      {/* Filtros */}
       {filtroAberto && (
         <div className="bg-pmmg-green-50 border border-pmmg-green-200 rounded-xl p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Data início</label>
-            <input
-              type="date"
-              value={filtros.data_inicio || ''}
+            <input type="date" value={filtros.data_inicio || ''}
               onChange={e => setFiltros(f => ({ ...f, data_inicio: e.target.value }))}
-              className="input-field text-sm"
-            />
+              className="input-field text-sm" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Data fim</label>
-            <input
-              type="date"
-              value={filtros.data_fim || ''}
+            <input type="date" value={filtros.data_fim || ''}
               onChange={e => setFiltros(f => ({ ...f, data_fim: e.target.value }))}
-              className="input-field text-sm"
-            />
+              className="input-field text-sm" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Título Minerário</label>
-            <select
-              value={filtros.titulo_minerario || ''}
+            <select value={filtros.titulo_minerario || ''}
               onChange={e => setFiltros(f => ({ ...f, titulo_minerario: e.target.value as any || undefined }))}
-              className="input-field text-sm"
-            >
+              className="input-field text-sm">
               <option value="">Todos</option>
               {Object.entries(TITULO_LABELS).map(([v, l]) => (
                 <option key={v} value={v}>{l}</option>
@@ -150,17 +152,14 @@ export default function FiscalizacoesList({ usuario, onNova, onEditar, onVisuali
             </select>
           </div>
           <div className="flex items-end">
-            <button
-              onClick={() => { setFiltros({}); setBusca(''); setPage(1) }}
-              className="btn-secondary text-sm w-full justify-center"
-            >
+            <button onClick={() => { setFiltros({}); setBusca(''); setPage(1) }}
+              className="btn-secondary text-sm w-full justify-center">
               Limpar filtros
             </button>
           </div>
         </div>
       )}
 
-      {/* Resultado */}
       <div className="text-xs text-gray-500 mb-3">
         {loading ? 'Carregando...' : `${total} registro(s) encontrado(s)`}
       </div>
@@ -209,9 +208,7 @@ export default function FiscalizacoesList({ usuario, onNova, onEditar, onVisuali
                   <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{r.alvo_nome || '—'}</td>
                   <td className="px-4 py-3 hidden lg:table-cell">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                      ${r.titulo_minerario === 'clandestino'
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-gray-100 text-gray-700'}`}>
+                      ${r.titulo_minerario === 'clandestino' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
                       {TITULO_LABELS[r.titulo_minerario] || r.titulo_minerario}
                     </span>
                   </td>
@@ -221,32 +218,36 @@ export default function FiscalizacoesList({ usuario, onNova, onEditar, onVisuali
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
                       <button
+                        type="button"
                         onClick={() => onVisualizar(r)}
                         title="Visualizar"
-                        className="p-1.5 text-gray-500 hover:text-pmmg-green-700 hover:bg-pmmg-green-50 rounded transition-colors"
+                        className="p-1.5 text-gray-500 hover:text-pmmg-green-700 hover:bg-pmmg-green-50 rounded transition-colors cursor-pointer"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => onEditar(r)}
+                        type="button"
+                        onClick={() => handleEditar(r)}
                         title="Editar"
-                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
+                        type="button"
                         onClick={() => gerarPDF(r, usuario.nome)}
                         title="Gerar PDF"
-                        className="p-1.5 text-gray-500 hover:text-pmmg-gold-600 hover:bg-pmmg-gold-50 rounded transition-colors"
+                        className="p-1.5 text-gray-500 hover:text-pmmg-gold-600 hover:bg-pmmg-gold-50 rounded transition-colors cursor-pointer"
                       >
                         <FileDown className="w-4 h-4" />
                       </button>
                       {isAdmin && (
                         <button
+                          type="button"
                           onClick={() => handleExcluir(r.id!)}
                           disabled={excluindo === r.id}
                           title="Excluir"
-                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-40"
+                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer disabled:opacity-40"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -263,35 +264,24 @@ export default function FiscalizacoesList({ usuario, onNova, onEditar, onVisuali
       {/* Paginação */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
-          <p className="text-sm text-gray-500">
-            Página {page} de {totalPages}
-          </p>
+          <p className="text-sm text-gray-500">Página {page} de {totalPages}</p>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="btn-secondary p-2 disabled:opacity-40"
-            >
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="btn-secondary p-2 disabled:opacity-40">
               <ChevronLeft className="w-4 h-4" />
             </button>
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               const p = Math.max(1, Math.min(page - 2, totalPages - 4)) + i
               return (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
+                <button key={p} onClick={() => setPage(p)}
                   className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors
-                    ${p === page ? 'bg-pmmg-green-700 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                >
+                    ${p === page ? 'bg-pmmg-green-700 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
                   {p}
                 </button>
               )
             })}
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="btn-secondary p-2 disabled:opacity-40"
-            >
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="btn-secondary p-2 disabled:opacity-40">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
