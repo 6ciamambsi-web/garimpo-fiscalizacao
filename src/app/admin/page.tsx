@@ -245,9 +245,15 @@ export default function AdminPage() {
                           <RotateCcw className="w-4 h-4" />
                         </button>
                         <button onClick={() => handleToggleAtivo(u)} title={u.ativo ? 'Desativar' : 'Reativar'}
-                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                          className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors">
                           {u.ativo ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                         </button>
+                        {u.id !== usuarioAtual?.id && (
+                          <button onClick={() => handleExcluirUsuario(u)} title="Excluir permanentemente"
+                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
