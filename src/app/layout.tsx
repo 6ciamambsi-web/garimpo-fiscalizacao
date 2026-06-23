@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Fiscalização de Garimpo/Draga — 3ª CIA PM MAmb',
+  title: 'Fiscalização de Garimpo/Draga — 5ª CIA PM MAmb',
   description: 'Sistema de cadastro e gerenciamento de fiscalizações de garimpos e dragas',
   robots: 'noindex, nofollow'
 }
