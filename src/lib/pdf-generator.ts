@@ -5,7 +5,7 @@ import type { Fiscalizacao } from '@/types'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-const TITULO_MINERARIO_LABELS: Record<string, string> = {
+const TITULO_LABELS: Record<string, string> = {
   clandestino: 'Clandestino',
   portaria_lavra: 'Portaria de Lavra',
   permissao_lavra: 'Permissão de Lavra Garimpeira',
@@ -25,8 +25,7 @@ const METODO_LABELS: Record<string, string> = {
 
 const ORDEM_POSTO: Record<string, number> = {
   'CEL': 1, 'TC': 2, 'MAJ': 3, 'CAP': 4,
-  '1º TEN': 5, '1 TEN': 5, '2º TEN': 6, '2 TEN': 6,
-  'SUB TEN': 7, 'SUBTEN': 7,
+  '1º TEN': 5, '2º TEN': 6, 'SUB TEN': 7, 'SUBTEN': 7,
   '1º SGT': 8, '1ºSGT': 8, '1ºSGT QPR': 8,
   '2º SGT': 9, '2ºSGT': 9,
   '3º SGT': 10, '3ºSGT': 10, '3º SGT QPR': 10,
@@ -42,7 +41,6 @@ function getOrdem(posto: string): number {
   return 99
 }
 
-// Formata NPM: 1463223 → 146.322-3
 function formatarNPM(npm: string): string {
   if (!npm) return ''
   const n = npm.replace(/\D/g, '')
@@ -57,12 +55,12 @@ export function gerarPDF(fiscalizacao: Fiscalizacao, usuarioNome: string): void 
   const pageH = doc.internal.pageSize.getHeight()
   const margin = 14
   const contentW = pageW - margin * 2
-  let y = margin
+  let y = 32
 
   const checkY = (needed = 20) => {
     if (y + needed > pageH - 16) {
       doc.addPage()
-      y = margin + 32
+      y = 32
       drawHeader()
     }
   }
@@ -106,26 +104,37 @@ export function gerarPDF(fiscalizacao: Fiscalizacao, usuarioNome: string): void 
     y += 10
   }
 
-  // Campo com label e valor na mesma linha
-  const addField = (label: string, value: string | number | undefined) => {
+  // Campo: label em negrito + valor na linha de baixo se for longo
+  const addField = (label: string, value: string | number | undefined | null) => {
     const val = (value !== undefined && value !== null && value !== '') ? String(value) : '—'
-    checkY(8)
+    checkY(10)
     doc.setFontSize(8)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(80, 80, 80)
     doc.text(`${label}:`, margin, y)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(0, 0, 0)
-    const labelW = doc.getTextWidth(`${label}: `) + 1
-    const maxW = contentW - labelW
-    const lines = doc.splitTextToSize(val, maxW)
-    doc.text(lines, margin + labelW, y)
-    y += Math.max(6, lines.length * 5.5)
+    // Calcular espaço disponível após o label
+    const labelW = doc.getTextWidth(`${label}: `)
+    const availW = contentW - labelW
+    const lines = doc.splitTextToSize(val, availW)
+    if (lines.length === 1 && labelW + doc.getTextWidth(val) <= contentW) {
+      // Cabe na mesma linha
+      doc.text(val, margin + labelW, y)
+      y += 6.5
+    } else {
+      // Vai para a linha de baixo
+      y += 5
+      lines.forEach((line: string) => {
+        checkY(6)
+        doc.text(line, margin + 4, y)
+        y += 5.5
+      })
+    }
   }
 
   // ── Início ────────────────────────────────────────────────
   drawHeader()
-  y = 32
 
   // ID e data
   doc.setFontSize(7.5)
@@ -138,44 +147,51 @@ export function gerarPDF(fiscalizacao: Fiscalizacao, usuarioNome: string): void 
     )
   }
   doc.setTextColor(0, 0, 0)
-  y += 7
+  y += 8
 
   // ── 1. DADOS GERAIS ───────────────────────────────────────
   addSection('1. Dados Gerais')
 
-  // Equipe ordenada por posto — tabela com Nº PM | Posto | Nome
-  const equipeNomes = (fiscalizacao.equipe_nomes || [])
-  const equipePostos = ((fiscalizacao as unknown as Record<string, unknown>).equipe_postos || []) as string[]
-  const equipeNpms = ((fiscalizacao as unknown as Record<string, unknown>).equipe_npms || []) as string[]
+  // Equipe — tabela com Nº PM | Posto | Nome ordenada por hierarquia
+  const equipeNomes = fiscalizacao.equipe_nomes || []
+  const equipePostos = (fiscalizacao as unknown as Record<string, string[]>).equipe_postos || []
+  const equipeNpms   = (fiscalizacao as unknown as Record<string, string[]>).equipe_npms || []
 
   const equipe = equipeNomes
-    .map((nome, i) => ({
-      npm: equipeNpms[i] || '',
-      posto: equipePostos[i] || '',
-      nome
-    }))
+    .map((nome, i) => ({ nome, posto: equipePostos[i] || '', npm: equipeNpms[i] || '' }))
     .sort((a, b) => getOrdem(a.posto) - getOrdem(b.posto))
 
   if (equipe.length > 0) {
-    checkY(12 + equipe.length * 6)
+    checkY(10 + equipe.length * 6)
     doc.setFontSize(8)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(80, 80, 80)
     doc.text('Equipe Responsável:', margin, y)
-    y += 5.5
+    y += 6
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(0, 0, 0)
 
-    equipe.forEach(({ npm, posto, nome }) => {
-      checkY(6)
-      const npmFmt = npm ? `Nº PM ${formatarNPM(npm)}` : ''
-      // Colunas: NPM | Posto | Nome
-      const col1 = npmFmt.padEnd(18)
-      const col2 = (posto || '').padEnd(14)
-      doc.text(`${col1}${col2}${nome}`, margin + 3, y)
-      y += 5.5
+    // Usar autoTable para alinhar colunas perfeitamente
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin + 2, right: margin },
+      head: [['Nº PM', 'Posto/Grad.', 'Nome Completo']],
+      body: equipe.map(({ npm, posto, nome }) => [
+        npm ? formatarNPM(npm) : '—',
+        posto || '—',
+        nome
+      ]),
+      styles: { fontSize: 8, cellPadding: 1.5 },
+      headStyles: { fillColor: [10, 110, 62], textColor: 255, fontSize: 7.5 },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 'auto' }
+      },
+      theme: 'striped',
+      alternateRowStyles: { fillColor: [245, 252, 248] }
     })
-    y += 2
+    y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
   } else {
     addField('Equipe Responsável', '—')
   }
@@ -198,7 +214,7 @@ export function gerarPDF(fiscalizacao: Fiscalizacao, usuarioNome: string): void 
 
   // ── 3. TRABALHADORES ──────────────────────────────────────
   addSection('3. Levantamento de Trabalhadores')
-  // Quantidade em linha própria, sem sobreposição
+
   checkY(10)
   doc.setFontSize(8)
   doc.setFont('helvetica', 'bold')
@@ -206,7 +222,7 @@ export function gerarPDF(fiscalizacao: Fiscalizacao, usuarioNome: string): void 
   doc.text('Quantidade no Momento da Abordagem:', margin, y)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(0, 0, 0)
-  doc.text(String(fiscalizacao.qtd_trabalhadores ?? 0), margin + 75, y)
+  doc.text(String(fiscalizacao.qtd_trabalhadores ?? 0), margin + 80, y)
   y += 7
 
   if (fiscalizacao.trabalhadores?.length > 0) {
@@ -218,6 +234,11 @@ export function gerarPDF(fiscalizacao: Fiscalizacao, usuarioNome: string): void 
       body: fiscalizacao.trabalhadores.map(t => [t.nome_completo, t.cpf, t.funcao]),
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [10, 110, 62], textColor: 255, fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 'auto' },
+        1: { cellWidth: 40 },
+        2: { cellWidth: 35 }
+      },
       alternateRowStyles: { fillColor: [245, 252, 248] },
     })
     y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
@@ -247,8 +268,8 @@ export function gerarPDF(fiscalizacao: Fiscalizacao, usuarioNome: string): void 
     styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [10, 110, 62], textColor: 255 },
     columnStyles: {
-      0: { cellWidth: 140 },
-      1: { halign: 'center', fontStyle: 'bold', cellWidth: 40 }
+      0: { cellWidth: 150 },
+      1: { halign: 'center', fontStyle: 'bold', cellWidth: 30 }
     },
     alternateRowStyles: { fillColor: [245, 252, 248] }
   })
@@ -276,7 +297,7 @@ export function gerarPDF(fiscalizacao: Fiscalizacao, usuarioNome: string): void 
   addField('Título Minerário',
     fiscalizacao.titulo_minerario === 'outro'
       ? fiscalizacao.titulo_minerario_outro
-      : TITULO_MINERARIO_LABELS[fiscalizacao.titulo_minerario])
+      : TITULO_LABELS[fiscalizacao.titulo_minerario])
   addField('Nº do Processo Minerário', fiscalizacao.numero_processo_minerario)
   if (fiscalizacao.informacoes_complementares) {
     checkY(15)
@@ -284,31 +305,28 @@ export function gerarPDF(fiscalizacao: Fiscalizacao, usuarioNome: string): void 
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(80, 80, 80)
     doc.text('Informações Complementares:', margin, y)
-    y += 5.5
+    y += 6
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(0, 0, 0)
     const linhas = doc.splitTextToSize(fiscalizacao.informacoes_complementares, contentW)
     linhas.forEach((linha: string) => {
       checkY(6)
-      doc.text(linha, margin, y)
+      doc.text(linha, margin + 4, y)
       y += 5.5
     })
   }
 
-  // ── Rodapés em todas as páginas ───────────────────────────
+  // ── Rodapés ───────────────────────────────────────────────
   const totalPages = doc.getNumberOfPages()
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i)
     drawFooter(i, totalPages)
   }
 
-  // ── Nome do arquivo: fiscalizacao-alvo-data-hora.pdf ──────
-  const alvoNome = (fiscalizacao.alvo_nome || 'sem-alvo')
+  // ── Nome do arquivo ───────────────────────────────────────
+  const alvoLabel = (fiscalizacao.alvo_nome || 'sem-alvo')
     .replace(/\s+/g, '-')
     .replace(/[^a-zA-Z0-9\-]/g, '')
-    .toLowerCase()
-  const dataHora = format(new Date(), 'ddMMyyyy-HHmm')
-  const alvoLabel = (fiscalizacao.alvo_nome || 'sem-alvo').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '')
   const dataLabel = format(new Date(), 'dd-MM-yyyy')
   const horaLabel = format(new Date(), "HH'h'mm")
   doc.save(`fiscalizacao_${alvoLabel}_${dataLabel}_${horaLabel}.pdf`)
