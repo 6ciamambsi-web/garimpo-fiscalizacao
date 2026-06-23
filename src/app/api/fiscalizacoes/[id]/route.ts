@@ -1,8 +1,6 @@
 // src/app/api/fiscalizacoes/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { registrarAuditoria, verificarPermissao } from '@/lib/auth'
-import type { Fiscalizacao } from '@/types'
 
 export async function GET(
   _request: NextRequest,
@@ -15,13 +13,9 @@ export async function GET(
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const { data, error } = await supabase
-      .from('fiscalizacoes')
-      .select('*')
-      .eq('id', id)
-      .single()
+      .from('fiscalizacoes').select('*').eq('id', id).single()
 
-    if (error || !data) return NextResponse.json({ error: 'Registro não encontrado' }, { status: 404 })
-
+    if (error || !data) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
     return NextResponse.json({ data })
   } catch {
     return NextResponse.json({ error: 'Erro ao buscar registro' }, { status: 500 })
@@ -38,43 +32,38 @@ export async function PUT(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-    const { data: usuario } = await supabase
-      .from('usuarios')
-      .select('nome, perfil')
-      .eq('id', user.id)
-      .single()
+    const body = await request.json()
 
-    // Buscar registro atual para auditoria
-    const { data: anterior } = await supabase
-      .from('fiscalizacoes')
-      .select('*')
-      .eq('id', id)
-      .single()
+    // Campos que NÃO existem na tabela — remover antes de enviar
+    const camposInvalidos = ['equipe_postos', 'equipe_npms', 'id', 'created_at']
+    const payload: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(body)) {
+      if (!camposInvalidos.includes(key)) {
+        payload[key] = value
+      }
+    }
 
-    const body: Partial<Fiscalizacao> = await request.json()
+    // Incluir campos extras que existem na tabela
+    payload.equipe_postos = body.equipe_postos || []
+    payload.equipe_npms   = body.equipe_npms || []
+    payload.updated_at    = new Date().toISOString()
 
     const { data, error } = await supabase
       .from('fiscalizacoes')
-      .update({ ...body, updated_at: new Date().toISOString() })
+      .update(payload)
       .eq('id', id)
       .select()
       .single()
 
-    if (error) throw error
-
-    await registrarAuditoria({
-      usuario_id: user.id,
-      usuario_nome: usuario?.nome || user.email || '',
-      acao: 'UPDATE',
-      tabela: 'fiscalizacoes',
-      registro_id: id,
-      dados_anteriores: anterior as Record<string, unknown>,
-      dados_novos: data as Record<string, unknown>
-    })
+    if (error) {
+      console.error('PUT error:', JSON.stringify(error))
+      return NextResponse.json({ error: `Erro ao atualizar: ${error.message}` }, { status: 500 })
+    }
 
     return NextResponse.json({ data, message: 'Registro atualizado com sucesso' })
-  } catch {
-    return NextResponse.json({ error: 'Erro ao atualizar registro' }, { status: 500 })
+  } catch (err) {
+    console.error('PUT unexpected error:', err)
+    return NextResponse.json({ error: 'Erro inesperado ao atualizar' }, { status: 500 })
   }
 }
 
@@ -88,40 +77,27 @@ export async function DELETE(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
+    // Verificar se é admin
     const { data: usuario } = await supabase
-      .from('usuarios')
-      .select('nome, perfil')
-      .eq('id', user.id)
-      .single()
+      .from('usuarios').select('perfil').eq('id', user.id).single()
 
-    if (!verificarPermissao(usuario as any, 'admin')) {
-      return NextResponse.json({ error: 'Sem permissão para excluir registros' }, { status: 403 })
+    if (!usuario || usuario.perfil !== 'admin') {
+      return NextResponse.json({ error: 'Sem permissão para excluir' }, { status: 403 })
     }
-
-    const { data: anterior } = await supabase
-      .from('fiscalizacoes')
-      .select('*')
-      .eq('id', id)
-      .single()
 
     const { error } = await supabase
       .from('fiscalizacoes')
       .delete()
       .eq('id', id)
 
-    if (error) throw error
-
-    await registrarAuditoria({
-      usuario_id: user.id,
-      usuario_nome: usuario?.nome || user.email || '',
-      acao: 'DELETE',
-      tabela: 'fiscalizacoes',
-      registro_id: id,
-      dados_anteriores: anterior as Record<string, unknown>
-    })
+    if (error) {
+      console.error('DELETE error:', JSON.stringify(error))
+      return NextResponse.json({ error: `Erro ao excluir: ${error.message}` }, { status: 500 })
+    }
 
     return NextResponse.json({ message: 'Registro excluído com sucesso' })
-  } catch {
-    return NextResponse.json({ error: 'Erro ao excluir registro' }, { status: 500 })
+  } catch (err) {
+    console.error('DELETE unexpected error:', err)
+    return NextResponse.json({ error: 'Erro inesperado ao excluir' }, { status: 500 })
   }
 }
