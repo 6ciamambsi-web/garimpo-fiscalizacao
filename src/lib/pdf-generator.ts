@@ -145,8 +145,8 @@ export function gerarPDF(fiscalizacao: Fiscalizacao, usuarioNome: string): void 
 
   // Equipe ordenada por posto — tabela com Nº PM | Posto | Nome
   const equipeNomes = (fiscalizacao.equipe_nomes || [])
-  const equipePostos = ((fiscalizacao as Record<string, unknown>).equipe_postos || []) as string[]
-  const equipeNpms = ((fiscalizacao as Record<string, unknown>).equipe_npms || []) as string[]
+  const equipePostos = ((fiscalizacao as unknown as Record<string, unknown>).equipe_postos || []) as string[]
+  const equipeNpms = ((fiscalizacao as unknown as Record<string, unknown>).equipe_npms || []) as string[]
 
   const equipe = equipeNomes
     .map((nome, i) => ({
