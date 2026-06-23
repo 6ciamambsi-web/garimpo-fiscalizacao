@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   Users, Upload, RefreshCw, Shield, UserCheck, UserX,
-  RotateCcw, ArrowLeft, CheckCircle, AlertCircle, Search
+  RotateCcw, ArrowLeft, CheckCircle, AlertCircle, Search, Trash2
 } from 'lucide-react'
 import type { Usuario } from '@/types'
 
@@ -84,6 +84,22 @@ export default function AdminPage() {
     })
     if (res.ok) { showToast('ok', u.ativo ? 'Usuário desativado' : 'Usuário reativado'); carregarUsuarios() }
     else showToast('erro', 'Erro ao atualizar')
+  }
+
+  const handleExcluirUsuario = async (u: Usuario) => {
+    if (!confirm(`Excluir permanentemente ${u.nome}? Esta ação não pode ser desfeita e o usuário perderá acesso ao sistema.`)) return
+    try {
+      const res = await fetch('/api/usuarios', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: u.id })
+      })
+      const data = await res.json()
+      if (res.ok) { showToast('ok', 'Usuário excluído com sucesso.'); carregarUsuarios() }
+      else showToast('erro', data.error || 'Erro ao excluir')
+    } catch {
+      showToast('erro', 'Erro ao excluir usuário')
+    }
   }
 
   const handleResetarSenha = async (u: Usuario) => {
