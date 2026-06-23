@@ -12,17 +12,47 @@ interface Props {
   erros: Record<string, string>
 }
 
+const ORDEM_POSTO: Record<string, number> = {
+  'CEL': 1, 'TC': 2, 'MAJ': 3, 'CAP': 4,
+  '1º TEN': 5, '2º TEN': 6, 'SUB TEN': 7, 'SUBTEN': 7,
+  '1º SGT': 8, '1ºSGT': 8, '1ºSGT QPR': 8,
+  '2º SGT': 9, '2ºSGT': 9,
+  '3º SGT': 10, '3ºSGT': 10, '3º SGT QPR': 10,
+  'CB': 11, 'SD': 12
+}
+
+function getOrdem(posto: string): number {
+  if (!posto) return 99
+  const up = posto.toUpperCase().trim()
+  for (const key of Object.keys(ORDEM_POSTO)) {
+    if (up.includes(key.toUpperCase())) return ORDEM_POSTO[key]
+  }
+  return 99
+}
+
 export default function SecaoDadosGerais({ dados, militares, alvos, onChange, erros }: Props) {
-  const toggleMilitar = (id: string) => {
-    const atual = dados.equipe_ids || []
-    const atualNomes = dados.equipe_nomes || []
-    const militar = militares.find(m => m.id === id)
-    if (atual.includes(id)) {
-      onChange('equipe_ids', atual.filter(i => i !== id))
-      onChange('equipe_nomes', atualNomes.filter(n => n !== militar?.nome_completo))
+  // Ordenar militares por posto
+  const militaresOrdenados = [...militares]
+    .filter(m => m.ativo)
+    .sort((a, b) => getOrdem(a.posto_graduacao) - getOrdem(b.posto_graduacao))
+
+  const toggleMilitar = (m: Militar) => {
+    const ids = dados.equipe_ids || []
+    const nomes = dados.equipe_nomes || []
+    const postos = (dados as any).equipe_postos || []
+    const npms = (dados as any).equipe_npms || []
+
+    if (ids.includes(m.id)) {
+      const idx = ids.indexOf(m.id)
+      onChange('equipe_ids', ids.filter((_, i) => i !== idx))
+      onChange('equipe_nomes', nomes.filter((_, i) => i !== idx))
+      onChange('equipe_postos' as keyof Fiscalizacao, postos.filter((_: unknown, i: number) => i !== idx))
+      onChange('equipe_npms' as keyof Fiscalizacao, npms.filter((_: unknown, i: number) => i !== idx))
     } else {
-      onChange('equipe_ids', [...atual, id])
-      onChange('equipe_nomes', [...atualNomes, militar?.nome_completo || ''])
+      onChange('equipe_ids', [...ids, m.id])
+      onChange('equipe_nomes', [...nomes, m.nome_completo])
+      onChange('equipe_postos' as keyof Fiscalizacao, [...postos, m.posto_graduacao])
+      onChange('equipe_npms' as keyof Fiscalizacao, [...npms, m.matricula])
     }
   }
 
@@ -38,11 +68,11 @@ export default function SecaoDadosGerais({ dados, militares, alvos, onChange, er
           <label className="block text-sm font-medium text-gray-700 mb-2 label-required">
             Equipe Responsável
           </label>
-          <div className="border border-gray-300 rounded-lg max-h-48 overflow-y-auto">
-            {militares.length === 0 ? (
+          <div className="border border-gray-300 rounded-lg max-h-56 overflow-y-auto">
+            {militaresOrdenados.length === 0 ? (
               <p className="text-gray-400 text-sm p-3">Carregando militares...</p>
             ) : (
-              militares.filter(m => m.ativo).map(m => (
+              militaresOrdenados.map(m => (
                 <label
                   key={m.id}
                   className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors
@@ -51,12 +81,14 @@ export default function SecaoDadosGerais({ dados, militares, alvos, onChange, er
                   <input
                     type="checkbox"
                     checked={(dados.equipe_ids || []).includes(m.id)}
-                    onChange={() => toggleMilitar(m.id)}
+                    onChange={() => toggleMilitar(m)}
                     className="rounded text-pmmg-green-600 focus:ring-pmmg-green-500"
                   />
                   <div>
                     <p className="text-sm font-medium text-gray-800">{m.nome_completo}</p>
-                    <p className="text-xs text-gray-500">{m.matricula} · {m.funcao} · {m.unidade}</p>
+                    <p className="text-xs text-gray-500">
+                      Nº {m.matricula} · {m.posto_graduacao} · {m.unidade}
+                    </p>
                   </div>
                 </label>
               ))
@@ -72,6 +104,7 @@ export default function SecaoDadosGerais({ dados, militares, alvos, onChange, er
         {/* Alvo */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Target className="inline w-4 h-4 mr-1" />
             Alvo Fiscalizado
           </label>
           <select
@@ -85,9 +118,7 @@ export default function SecaoDadosGerais({ dados, militares, alvos, onChange, er
           >
             <option value="">— Selecione o alvo —</option>
             {alvos.filter(a => a.ativo).map(a => (
-              <option key={a.id} value={a.id}>
-                {a.nome} {a.tipo ? `(${a.tipo})` : ''} {a.municipio ? `— ${a.municipio}` : ''}
-              </option>
+              <option key={a.id} value={a.id}>{a.nome}</option>
             ))}
           </select>
         </div>
@@ -96,6 +127,7 @@ export default function SecaoDadosGerais({ dados, militares, alvos, onChange, er
         <div className="field-group">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1 label-required">
+              <MapPin className="inline w-4 h-4 mr-1" />
               Município
             </label>
             <input
@@ -109,6 +141,7 @@ export default function SecaoDadosGerais({ dados, militares, alvos, onChange, er
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Clock className="inline w-4 h-4 mr-1" />
               Hora da Abordagem
             </label>
             <input
