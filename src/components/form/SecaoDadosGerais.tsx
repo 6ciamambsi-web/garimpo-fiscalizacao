@@ -1,4 +1,5 @@
 'use client'
+import React from 'react'
 // src/components/form/SecaoDadosGerais.tsx
 import { useState } from 'react'
 import { Users, MapPin, Clock, Target } from 'lucide-react'
@@ -29,6 +30,43 @@ function getOrdem(posto: string): number {
     if (up.includes(key.toUpperCase())) return ORDEM_POSTO[key]
   }
   return 99
+}
+
+
+// Componente interno para coordenadas — mantém texto livre durante digitação
+function CoordInput({ value, onChange, placeholder, hasError }: {
+  value: number | undefined
+  onChange: (v: number | undefined) => void
+  placeholder: string
+  hasError: boolean
+}) {
+  const [texto, setTexto] = React.useState(value != null ? String(value) : '')
+
+  React.useEffect(() => {
+    if (value != null && !isNaN(value)) {
+      setTexto(String(value))
+    }
+  }, [])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value
+    // Permite: dígitos, ponto, vírgula, sinal de menos
+    const filtrado = v.replace(/[^0-9.,-]/g, '')
+    setTexto(filtrado)
+    const num = parseFloat(filtrado.replace(',', '.'))
+    onChange(isNaN(num) ? undefined : num)
+  }
+
+  return (
+    <input
+      type="text"
+      value={texto}
+      onChange={handleChange}
+      className={`input-field font-mono ${hasError ? 'error' : ''}`}
+      placeholder={placeholder}
+      inputMode="decimal"
+    />
+  )
 }
 
 export default function SecaoDadosGerais({ dados, militares, alvos, onChange, erros }: Props) {
@@ -158,38 +196,20 @@ export default function SecaoDadosGerais({ dados, militares, alvos, onChange, er
         <div className="field-group">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
-            <input
-              type="text"
-              value={dados.coordenadas_lat != null ? String(dados.coordenadas_lat) : ''}
-              onChange={e => {
-                const v = e.target.value
-                if (v === '' || v === '-') {
-                  onChange('coordenadas_lat', v === '' ? undefined : v as unknown as number)
-                  return
-                }
-                const num = parseFloat(v.replace(',', '.'))
-                onChange('coordenadas_lat', isNaN(num) ? undefined : num)
-              }}
-              className={`input-field font-mono ${erros.coordenadas ? 'error' : ''}`}
+            <CoordInput
+              value={dados.coordenadas_lat}
+              onChange={v => onChange('coordenadas_lat', v)}
               placeholder="-21.123456"
+              hasError={!!erros.coordenadas}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
-            <input
-              type="text"
-              value={dados.coordenadas_lng != null ? String(dados.coordenadas_lng) : ''}
-              onChange={e => {
-                const v = e.target.value
-                if (v === '' || v === '-') {
-                  onChange('coordenadas_lng', v === '' ? undefined : v as unknown as number)
-                  return
-                }
-                const num = parseFloat(v.replace(',', '.'))
-                onChange('coordenadas_lng', isNaN(num) ? undefined : num)
-              }}
-              className={`input-field font-mono ${erros.coordenadas ? 'error' : ''}`}
+            <CoordInput
+              value={dados.coordenadas_lng}
+              onChange={v => onChange('coordenadas_lng', v)}
               placeholder="-44.123456"
+              hasError={!!erros.coordenadas}
             />
           </div>
         </div>
