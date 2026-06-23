@@ -1,7 +1,6 @@
 // src/app/api/fiscalizacoes/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { gravarFiscalizacaoSheets } from '@/lib/google-sheets'
 import type { Fiscalizacao } from '@/types'
 
 export async function GET(request: NextRequest) {
@@ -54,32 +53,33 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    const body: Fiscalizacao = await request.json()
+    const body = await request.json()
 
     if (!body.municipio?.trim()) {
       return NextResponse.json({ error: 'Município é obrigatório' }, { status: 400 })
     }
 
-    // Limpar campos que não existem na tabela do Supabase
-    const { equipe_postos, equipe_npms, ...resto } = body as Fiscalizacao & {
-      equipe_postos?: string[]
-      equipe_npms?: string[]
+    // Remover campos que não existem na tabela do Supabase
+    const camposExtras = ['equipe_postos', 'equipe_npms']
+    const payload: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(body)) {
+      if (!camposExtras.includes(key)) {
+        payload[key] = value
+      }
     }
 
-    const payload = {
-      ...resto,
-      // Guardar postos e npms dentro de equipe_nomes como JSON extra não é ideal
-      // Melhor guardar os dados extras em campos da tabela
-      equipe_ids: body.equipe_ids || [],
-      equipe_nomes: body.equipe_nomes || [],
-      usuario_id: user.id,
-      usuario_nome: usuario?.nome || '',
-      usuario_npm: usuario?.npm || '',
-      trabalhadores: body.trabalhadores || [],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      status: 'ativo'
-    }
+    // Adicionar metadados
+    payload.usuario_id = user.id
+    payload.usuario_nome = usuario?.nome || ''
+    payload.usuario_npm = usuario?.npm || ''
+    payload.trabalhadores = body.trabalhadores || []
+    payload.equipe_ids = body.equipe_ids || []
+    payload.equipe_nomes = body.equipe_nomes || []
+    payload.updated_at = new Date().toISOString()
+    payload.status = 'ativo'
+    // Não enviar created_at — deixar o Supabase gerar
+    delete payload.created_at
+    delete payload.id
 
     const { data, error } = await supabase
       .from('fiscalizacoes')
@@ -88,16 +88,25 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Supabase insert error:', error)
-      throw error
+      console.error('Supabase insert error:', JSON.stringify(error))
+      return NextResponse.json({ error: `Erro ao salvar: ${error.message}` }, { status: 500 })
     }
 
-    // Gravar no Google Sheets sem bloquear
-    gravarFiscalizacaoSheets({ ...data, equipe_postos, equipe_npms } as Fiscalizacao).catch(console.error)
+    // Gravar no Google Sheets de forma assíncrona — erro não bloqueia o retorno
+    try {
+      const { gravarFiscalizacaoSheets } = await import('@/lib/google-sheets')
+      gravarFiscalizacaoSheets({
+        ...data,
+        equipe_postos: body.equipe_postos,
+        equipe_npms: body.equipe_npms
+      } as Fiscalizacao)
+    } catch (sheetsErr) {
+      console.error('Sheets error (não crítico):', sheetsErr)
+    }
 
     return NextResponse.json({ data, message: 'Fiscalização cadastrada com sucesso' }, { status: 201 })
   } catch (err) {
-    console.error('POST fiscalizacoes error:', err)
-    return NextResponse.json({ error: 'Erro ao cadastrar fiscalização' }, { status: 500 })
+    console.error('POST fiscalizacoes unexpected error:', err)
+    return NextResponse.json({ error: 'Erro inesperado ao cadastrar' }, { status: 500 })
   }
 }
