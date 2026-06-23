@@ -1,9 +1,9 @@
 // src/app/api/usuarios/importar/route.ts
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getMilitaresFromSheets } from '@/lib/google-sheets'
 
-const ADMINS_NPM = ['1386697', '1463223'] // Jessé e Thiago
+const ADMINS_NPM = ['1386697', '1463223']
 const SENHA_PADRAO = 'Mudar@123'
 const DOMINIO = 'pmmg.mg.gov.br'
 
@@ -22,23 +22,30 @@ export async function POST() {
     if (!militares.length)
       return NextResponse.json({ error: 'Nenhum militar encontrado na planilha' }, { status: 400 })
 
-    // Buscar NPMs já cadastrados
-    const { data: existentes } = await supabase.from('usuarios').select('npm')
-    const npmsExistentes = new Set((existentes || []).map((u: { npm: string }) => u.npm))
+    const serviceClient = await createServiceClient()
 
-    const novos = militares.filter(m => !npmsExistentes.has(m.matricula))
+    // Buscar emails já cadastrados no Auth
+    const { data: authUsers } = await serviceClient.auth.admin.listUsers({ perPage: 1000 })
+    const emailsExistentes = new Set((authUsers?.users || []).map(u => u.email))
+
+    // Buscar npms já cadastrados na tabela usuarios
+    const { data: existentes } = await serviceClient.from('usuarios').select('npm')
+    const npmsExistentes = new Set((existentes || []).map((u: { npm: string }) => u.npm).filter(Boolean))
+
+    const novos = militares.filter(m => 
+      m.matricula && 
+      !npmsExistentes.has(m.matricula) &&
+      !emailsExistentes.has(`${m.matricula}@${DOMINIO}`)
+    )
 
     let importados = 0
     let erros = 0
     const detalhesErros: string[] = []
 
-    // Criar service client para criar usuários no Auth
-    const { createServiceClient } = await import('@/lib/supabase/server')
-    const serviceClient = await createServiceClient()
-
     for (const m of novos) {
       try {
         const email = `${m.matricula}@${DOMINIO}`
+
         // Criar no Auth
         const { data: authData, error: authError } = await serviceClient.auth.admin.createUser({
           email,
@@ -46,10 +53,10 @@ export async function POST() {
           email_confirm: true,
           user_metadata: { npm: m.matricula, nome: m.nome_completo }
         })
-        if (authError) throw authError
+        if (authError) throw new Error(`Auth: ${authError.message}`)
 
-        // Inserir na tabela usuarios
-        const { error: dbError } = await serviceClient.from('usuarios').insert({
+        // Inserir/atualizar na tabela usuarios com todos os campos
+        const { error: dbError } = await serviceClient.from('usuarios').upsert({
           id: authData.user.id,
           nome: m.nome_completo,
           npm: m.matricula,
@@ -58,8 +65,9 @@ export async function POST() {
           perfil: ADMINS_NPM.includes(m.matricula) ? 'admin' : 'operacional',
           ativo: true,
           primeiro_acesso: true
-        })
-        if (dbError) throw dbError
+        }, { onConflict: 'id' })
+
+        if (dbError) throw new Error(`DB: ${dbError.message}`)
         importados++
       } catch (err: unknown) {
         erros++
@@ -67,12 +75,37 @@ export async function POST() {
       }
     }
 
+    // Atualizar npm e posto dos que já existem mas estão sem esses dados
+    for (const m of militares) {
+      if (!m.matricula) continue
+      await serviceClient.from('usuarios')
+        .update({ 
+          npm: m.matricula, 
+          posto_graduacao: m.posto_graduacao,
+          nome: m.nome_completo
+        })
+        .eq('npm', m.matricula)
+        .is('posto_graduacao', null)
+    }
+
+    // Atualizar todos que têm npm mas posto vazio
+    for (const m of militares) {
+      if (!m.matricula) continue
+      await serviceClient.from('usuarios')
+        .update({ 
+          npm: m.matricula,
+          posto_graduacao: m.posto_graduacao 
+        })
+        .eq('nome', m.nome_completo)
+        .or('npm.is.null,posto_graduacao.eq.')
+    }
+
     return NextResponse.json({
-      message: `Importação concluída: ${importados} importado(s), ${novos.length - importados} com erro, ${npmsExistentes.size} já existiam.`,
+      message: `Importação concluída: ${importados} importado(s), ${erros} com erro, ${npmsExistentes.size} já existiam.`,
       importados,
       erros,
       ja_existiam: npmsExistentes.size,
-      detalhes_erros: detalhesErros
+      detalhes_erros: detalhesErros.slice(0, 5)
     })
   } catch (err) {
     console.error(err)
